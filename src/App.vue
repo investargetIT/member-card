@@ -10,6 +10,16 @@ const cardImageSrc = ref("");
 const renderedImage = ref("");
 const errorMessage = ref("");
 
+// 添加下载图片的函数
+const downloadImage = (dataUrl, filename = "membership-card.png") => {
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 onMounted(async () => {
   try {
     const response = await fetch("https://api.peidigroup.cn/pm/card/use");
@@ -33,7 +43,10 @@ onMounted(async () => {
       html2canvas(cardElement).then((canvas) => {
         renderedImage.value = canvas.toDataURL("image/png");
 
-        // 调用接口并传递参数
+        // 自动下载生成的图片
+        downloadImage(renderedImage.value);
+
+        // 注释掉的代码保持不变
         const updateResponse = fetch(
           "https://api.peidigroup.cn/pm/card/update",
           {
