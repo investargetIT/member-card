@@ -47,33 +47,33 @@ onMounted(async () => {
         downloadImage(renderedImage.value);
 
         // 注释掉的代码保持不变
-        const updateResponse = fetch(
-          "https://api.peidigroup.cn/pm/card/update",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              id: cardData.value.id,
-              isUsed: true,
-            }),
-          }
-        );
+        // const updateResponse = fetch(
+        //   "https://api.peidigroup.cn/pm/card/update",
+        //   {
+        //     method: "POST",
+        //     headers: {
+        //       "Content-Type": "application/json",
+        //     },
+        //     body: JSON.stringify({
+        //       id: cardData.value.id,
+        //       isUsed: true,
+        //     }),
+        //   }
+        // );
 
-        updateResponse
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error("Failed to update card status");
-            }
-            return res.json();
-          })
-          .then((data) => {
-            console.log("Card status updated:", data);
-          })
-          .catch((error) => {
-            console.error("Error updating card status:", error);
-          });
+        // updateResponse
+        //   .then((res) => {
+        //     if (!res.ok) {
+        //       throw new Error("Failed to update card status");
+        //     }
+        //     return res.json();
+        //   })
+        //   .then((data) => {
+        //     console.log("Card status updated:", data);
+        //   })
+        //   .catch((error) => {
+        //     console.error("Error updating card status:", error);
+        //   });
       });
     }
   } catch (error) {
@@ -92,20 +92,12 @@ onMounted(async () => {
       <div class="card-content">
         <span class="card-no">{{ cardData?.cardNo }}</span>
         <!-- 使用引入的图片作为背景 -->
-        <img
-          :src="cardBackground"
-          alt="Card Background"
-          class="card-background"
-        />
+        <img :src="cardBackground" alt="Card Background" class="card-background" />
         <img :src="cardImageSrc" alt="QR Code" class="qr-code" />
       </div>
     </div>
     <div v-else>
-      <img
-        :src="renderedImage"
-        alt="Rendered Card"
-        style="width: 350px; height: auto"
-      />
+      <img :src="renderedImage" alt="Rendered Card" style="width: 350px; height: auto" />
     </div>
   </div>
 </template>
@@ -117,9 +109,11 @@ onMounted(async () => {
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
 }
@@ -127,7 +121,8 @@ onMounted(async () => {
 .membership-card {
   border: 1px solid #ccc;
   border-radius: 8px;
-  padding: 0; /* 移除内边距 */
+  padding: 0;
+  /* 移除内边距 */
   width: 350px;
   margin: 0;
   text-align: center;
@@ -143,7 +138,7 @@ onMounted(async () => {
 
 .card-no {
   position: absolute;
-  top: 15.53%;
+  top: 13.80%;
   left: 75.11%;
   font-weight: bold;
   color: #fff;
@@ -157,7 +152,8 @@ onMounted(async () => {
 }
 
 .qr-code {
-  width: 90px; /* 设置合理的宽度 */
+  width: 90px;
+  /* 设置合理的宽度 */
   position: absolute;
   top: 339px;
   left: 130px;
