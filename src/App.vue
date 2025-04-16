@@ -22,8 +22,7 @@ const downloadImage = (dataUrl, filename = "membership-card.png") => {
 
 onMounted(async () => {
   try {
-    const regex = /\/card\/(\d+)/;
-    const [, number] = location.pathname.match(/\/card\/(\d+)/) || [];
+    const [, number] = location.href.match(/\/card\/\?(\d+)/) || [];
     let commonUrl = "https://api.peidigroup.cn/pm/card/use";
     if (number) {
       commonUrl = `${commonUrl}?id=${number}`;
