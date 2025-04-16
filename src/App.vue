@@ -22,7 +22,13 @@ const downloadImage = (dataUrl, filename = "membership-card.png") => {
 
 onMounted(async () => {
   try {
-    const response = await fetch("https://api.peidigroup.cn/pm/card/use");
+    const regex = /\/card\/(\d+)/;
+    const [, number] = location.pathname.match(/\/card\/(\d+)/) || [];
+    let commonUrl = "https://api.peidigroup.cn/pm/card/use";
+    if (number) {
+      commonUrl = `${commonUrl}?id=${number}`;
+    }
+    const response = await fetch(commonUrl);
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
@@ -92,12 +98,20 @@ onMounted(async () => {
       <div class="card-content">
         <span class="card-no">{{ cardData?.cardNo }}</span>
         <!-- 使用引入的图片作为背景 -->
-        <img :src="cardBackground" alt="Card Background" class="card-background" />
+        <img
+          :src="cardBackground"
+          alt="Card Background"
+          class="card-background"
+        />
         <img :src="cardImageSrc" alt="QR Code" class="qr-code" />
       </div>
     </div>
     <div v-else>
-      <img :src="renderedImage" alt="Rendered Card" style="width: 350px; height: auto" />
+      <img
+        :src="renderedImage"
+        alt="Rendered Card"
+        style="width: 350px; height: auto"
+      />
     </div>
   </div>
 </template>
@@ -138,7 +152,7 @@ onMounted(async () => {
 
 .card-no {
   position: absolute;
-  top: 13.80%;
+  top: 13.8%;
   left: 75.11%;
   font-weight: bold;
   color: #fff;
