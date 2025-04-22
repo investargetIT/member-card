@@ -45,8 +45,20 @@ onMounted(async () => {
     await nextTick();
     const cardElement = document.querySelector(".membership-card");
     if (cardElement) {
-      html2canvas(cardElement).then((canvas) => {
-        renderedImage.value = canvas.toDataURL("image/png");
+      html2canvas(cardElement, {
+        scale: 3, // 使用设备像素比
+        useCORS: true, // 允许加载跨域图片
+        logging: false, // 关闭日志
+        backgroundColor: null, // 透明背景
+        imageTimeout: 0, // 图片加载超时时间，0表示不限制
+        allowTaint: true, // 允许跨域图片
+        width: 350, // 固定宽度
+        // 优化渲染质量
+        imageRendering: "pixelated",
+        // 使用 CSS 缩放
+        windowWidth: 350,
+      }).then((canvas) => {
+        renderedImage.value = canvas.toDataURL("image/png", 1.0);
 
         // 自动下载生成的图片
         downloadImage(renderedImage.value);
@@ -182,6 +194,21 @@ onMounted(async () => {
 
 .footer-image {
   width: 100%;
+  height: auto;
+}
+.membership-card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0;
+  width: 350px;
+  margin: 0;
+  text-align: center;
+  box-sizing: border-box;
+}
+.card-content {
+  position: relative;
+  width: 100%;
+  min-height: 620px;
   height: auto;
 }
 </style>
