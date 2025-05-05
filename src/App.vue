@@ -9,6 +9,7 @@ const cardData = ref(null);
 const cardImageSrc = ref("");
 const renderedImage = ref("");
 const errorMessage = ref("");
+const currentPath = ref("");
 
 // 添加下载图片的函数
 const downloadImage = (dataUrl, filename = "membership-card.png") => {
@@ -22,7 +23,15 @@ const downloadImage = (dataUrl, filename = "membership-card.png") => {
 
 onMounted(async () => {
   try {
-    const [, number] = location.href.match(/\/card\/\?(\d+)/) || [];
+    // 设置当前路径
+    currentPath.value = location.href;
+
+    // 修改路径匹配逻辑，支持两种路径
+    const cardMatch = location.href.match(/\/card\/\?(\d+)/);
+    const memberMatch = location.href.match(/\/member\/\?(\d+)/);
+    const number = cardMatch?.[1] || memberMatch?.[1];
+    const isMemberPath = !!memberMatch;
+
     let commonUrl = "https://api.peidigroup.cn/pm/card/use";
     if (number) {
       commonUrl = `${commonUrl}?id=${number}`;
@@ -43,7 +52,9 @@ onMounted(async () => {
 
     // 等待 DOM 渲染完成后将卡片转换为图像
     await nextTick();
-    const cardElement = document.querySelector(".membership-card");
+    const cardElement = document.querySelector(
+      isMemberPath ? ".member-card-content" : ".membership-card"
+    );
     if (cardElement) {
       html2canvas(cardElement, {
         scale: 3, // 使用设备像素比
@@ -62,35 +73,6 @@ onMounted(async () => {
 
         // 自动下载生成的图片
         downloadImage(renderedImage.value);
-
-        // 注释掉的代码保持不变
-        // const updateResponse = fetch(
-        //   "https://api.peidigroup.cn/pm/card/update",
-        //   {
-        //     method: "POST",
-        //     headers: {
-        //       "Content-Type": "application/json",
-        //     },
-        //     body: JSON.stringify({
-        //       id: cardData.value.id,
-        //       isUsed: true,
-        //     }),
-        //   }
-        // );
-
-        // updateResponse
-        //   .then((res) => {
-        //     if (!res.ok) {
-        //       throw new Error("Failed to update card status");
-        //     }
-        //     return res.json();
-        //   })
-        //   .then((data) => {
-        //     console.log("Card status updated:", data);
-        //   })
-        //   .catch((error) => {
-        //     console.error("Error updating card status:", error);
-        //   });
       });
     }
   } catch (error) {
@@ -105,7 +87,11 @@ onMounted(async () => {
     <p>{{ errorMessage }}</p>
   </div>
   <div v-else>
-    <div v-if="!renderedImage" class="membership-card">
+    <!-- 原有的卡片逻辑 -->
+    <div
+      v-if="!renderedImage && !currentPath.includes('/member/')"
+      class="membership-card"
+    >
       <div class="card-content">
         <span class="card-no">{{ cardData?.cardNo }}</span>
         <!-- 使用引入的图片作为背景 -->
@@ -117,6 +103,18 @@ onMounted(async () => {
         <img :src="cardImageSrc" alt="QR Code" class="qr-code" />
       </div>
     </div>
+    <!-- 新增的会员卡逻辑 -->
+    <div
+      v-else-if="!renderedImage && currentPath.includes('/member/')"
+      class="membership-card-container"
+    >
+      <div class="member-card-content">
+        <span class="member-card-tip">Peidi 佩蒂</span>
+        <img :src="cardImageSrc" alt="QR Code" class="member-qr-code" />
+        <span class="member-card-no">卡号：No.{{ cardData?.cardNo }}</span>
+      </div>
+    </div>
+    <!-- 渲染后的图片显示 -->
     <div v-else>
       <img
         :src="renderedImage"
@@ -210,5 +208,54 @@ onMounted(async () => {
   width: 100%;
   min-height: 620px;
   height: auto;
+}
+
+/* 新增会员卡样式 */
+.membership-card-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0;
+  width: 350px;
+  margin: 0;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.member-card-content {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  height: auto;
+}
+
+.member-card-tip {
+  position: absolute;
+  top: 5.8%;
+  left: 8.11%;
+  font-weight: bold;
+  color: #000;
+  font-size: 18px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.member-card-no {
+  position: absolute;
+  top: 75.8%;
+  left: 36.11%;
+  font-weight: bold;
+  color: #000;
+  font-size: 18px;
+}
+
+.member-qr-code {
+  width: 200px;
+  position: absolute;
+  top: 77px;
+  left: 73px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 50%;
 }
 </style>
