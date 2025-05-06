@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick } from "vue";
+import { ref, onMounted, nextTick, watch } from "vue";
 import html2canvas from "html2canvas";
 import HelloWorld from "./components/HelloWorld.vue";
 // 引入本地图片
@@ -13,6 +13,7 @@ const currentPath = ref("");
 const isLoading = ref(true); // 添加加载状态
 const imageLoaded = ref(false); // 添加图片加载状态
 const isRendering = ref(false); // 添加渲染状态
+const showMemberCard = ref(false); // 添加控制会员卡显示的状态
 
 // 添加下载图片的函数
 const downloadImage = (dataUrl, filename = "membership-card.png") => {
@@ -50,19 +51,17 @@ onMounted(async () => {
     const res = await response.json();
     if (res.data?.card) {
       cardData.value = res.data;
+      cardImageSrc.value = `data:image/png;base64,${res.data.card}`;
     } else {
       errorMessage.value = "当前已无会员卡内容";
       isLoading.value = false;
       return;
     }
 
-    // 假设 cardData.value.card 是 Base64 编码的字符串
-    cardImageSrc.value = `data:image/png;base64,${cardData.value.card}`;
-
     // 等待 DOM 渲染完成后将卡片转换为图像
     await nextTick();
     const cardElement = document.querySelector(
-      isMemberPath ? ".member-card-content" : ".membership-card"
+      isMemberPath ? ".member-card-content" : ".card-content"
     );
     if (cardElement) {
       isRendering.value = true;
@@ -103,17 +102,25 @@ onMounted(async () => {
 // 监听图片加载状态
 const handleImageLoad = () => {
   imageLoaded.value = true;
-  // 只有在非渲染状态下才关闭加载状态
   if (!isRendering.value) {
     isLoading.value = false;
   }
 };
 
-const handleImageError = () => {
-  errorMessage.value = "图片加载失败";
+const handleImageError = (error) => {
+  console.error("Image load error:", error);
+  errorMessage.value = "图片加载失败，请刷新重试";
   isLoading.value = false;
   isRendering.value = false;
 };
+
+// 监听 renderedImage 的变化
+watch(renderedImage, (newValue) => {
+  if (newValue && currentPath.value.includes("/card/")) {
+    showMemberCard.value = true;
+    isLoading.value = false;
+  }
+});
 </script>
 
 <template>
@@ -122,16 +129,13 @@ const handleImageError = () => {
   </div>
   <div v-else>
     <!-- 加载状态 -->
-    <div
-      v-if="isLoading && currentPath.includes('/member/')"
-      class="loading-container"
-    >
+    <div v-if="isLoading" class="loading-container">
       <div class="loading-spinner"></div>
       <p>{{ isRendering ? "生成图片中..." : "加载中..." }}</p>
     </div>
     <!-- 原有的卡片逻辑 -->
     <div
-      v-if="!renderedImage && !currentPath.includes('/member/')"
+      v-else-if="!renderedImage && !currentPath.includes('/member/')"
       class="membership-card"
     >
       <div class="card-content">
@@ -145,6 +149,7 @@ const handleImageError = () => {
         <img :src="cardImageSrc" alt="QR Code" class="qr-code" />
       </div>
     </div>
+    <!-- 会员卡显示逻辑 -->
     <div
       v-else-if="!renderedImage && currentPath.includes('/member/')"
       class="membership-card-container"
