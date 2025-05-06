@@ -10,10 +10,8 @@ const cardImageSrc = ref("");
 const renderedImage = ref("");
 const errorMessage = ref("");
 const currentPath = ref("");
-const isLoading = ref(true); // 添加加载状态
-const imageLoaded = ref(false); // 添加图片加载状态
-const isRendering = ref(false); // 添加渲染状态
-const showMemberCard = ref(false); // 添加控制会员卡显示的状态
+const isRendering = ref(false);
+const showMemberCard = ref(false);
 
 // 添加下载图片的函数
 const downloadImage = (dataUrl, filename = "membership-card.png") => {
@@ -27,14 +25,9 @@ const downloadImage = (dataUrl, filename = "membership-card.png") => {
 
 onMounted(async () => {
   try {
-    isLoading.value = true;
-    imageLoaded.value = false;
     isRendering.value = false;
-
-    // 设置当前路径
     currentPath.value = location.href;
 
-    // 修改路径匹配逻辑，支持两种路径
     const cardMatch = location.href.match(/\/card\/\?(\d+)/);
     const memberMatch = location.href.match(/\/member\/\?(\d+)/);
     const number = cardMatch?.[1] || memberMatch?.[1];
@@ -54,11 +47,9 @@ onMounted(async () => {
       cardImageSrc.value = `data:image/png;base64,${res.data.card}`;
     } else {
       errorMessage.value = "当前已无会员卡内容";
-      isLoading.value = false;
       return;
     }
 
-    // 等待 DOM 渲染完成后将卡片转换为图像
     await nextTick();
     const cardElement = document.querySelector(
       isMemberPath ? ".member-card-content" : ".card-content"
@@ -80,45 +71,24 @@ onMounted(async () => {
           renderedImage.value = canvas.toDataURL("image/png", 1.0);
           downloadImage(renderedImage.value);
           isRendering.value = false;
-          isLoading.value = false;
         })
         .catch((error) => {
           console.error("Error generating image:", error);
           errorMessage.value = "图片生成失败";
           isRendering.value = false;
-          isLoading.value = false;
         });
-    } else {
-      isLoading.value = false;
     }
   } catch (error) {
     console.error("There was a problem with the fetch operation:", error);
     errorMessage.value = "当前已无会员卡内容";
-    isLoading.value = false;
     isRendering.value = false;
   }
 });
-
-// 监听图片加载状态
-const handleImageLoad = () => {
-  imageLoaded.value = true;
-  if (!isRendering.value) {
-    isLoading.value = false;
-  }
-};
-
-const handleImageError = (error) => {
-  console.error("Image load error:", error);
-  errorMessage.value = "图片加载失败，请刷新重试";
-  isLoading.value = false;
-  isRendering.value = false;
-};
 
 // 监听 renderedImage 的变化
 watch(renderedImage, (newValue) => {
   if (newValue && currentPath.value.includes("/card/")) {
     showMemberCard.value = true;
-    isLoading.value = false;
   }
 });
 </script>
@@ -129,9 +99,9 @@ watch(renderedImage, (newValue) => {
   </div>
   <div v-else>
     <!-- 加载状态 -->
-    <div v-if="isLoading" class="loading-container">
+    <div v-if="isRendering" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>{{ isRendering ? "生成图片中..." : "加载中..." }}</p>
+      <p>生成图片中...</p>
     </div>
     <!-- 原有的卡片逻辑 -->
     <div
@@ -156,14 +126,8 @@ watch(renderedImage, (newValue) => {
     >
       <div class="member-card-content">
         <span class="member-card-tip">Peidi 佩蒂</span>
-        <img
-          :src="cardImageSrc"
-          alt="QR Code"
-          class="member-qr-code"
-          @load="handleImageLoad"
-          @error="handleImageError"
-        />
-        <span class="member-card-no">卡号：No.{{ cardData?.cardNo }}</span>
+        <img :src="cardImageSrc" alt="QR Code" class="member-qr-code" />
+        <span class="member-card-no">No.{{ cardData?.cardNo }}</span>
       </div>
     </div>
     <!-- 渲染后的图片显示 -->
@@ -171,7 +135,7 @@ watch(renderedImage, (newValue) => {
       <img
         :src="renderedImage"
         alt="Rendered Card"
-        style="width: 350px; height: auto"
+        style="width: 350px; height: auto; border: 1px solid #ccc"
       />
     </div>
   </div>
@@ -197,17 +161,16 @@ watch(renderedImage, (newValue) => {
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 0;
-  /* 移除内边距 */
   width: 350px;
   margin: 0;
   text-align: center;
   box-sizing: border-box;
-  /* 移除背景颜色 */
 }
 
 .card-content {
   position: relative;
   width: 100%;
+  min-height: 620px;
   height: auto;
 }
 
@@ -228,7 +191,6 @@ watch(renderedImage, (newValue) => {
 
 .qr-code {
   width: 90px;
-  /* 设置合理的宽度 */
   position: absolute;
   top: 339px;
   left: 130px;
@@ -244,21 +206,6 @@ watch(renderedImage, (newValue) => {
 
 .footer-image {
   width: 100%;
-  height: auto;
-}
-.membership-card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 0;
-  width: 350px;
-  margin: 0;
-  text-align: center;
-  box-sizing: border-box;
-}
-.card-content {
-  position: relative;
-  width: 100%;
-  min-height: 620px;
   height: auto;
 }
 
@@ -294,7 +241,7 @@ watch(renderedImage, (newValue) => {
 .member-card-no {
   position: absolute;
   top: 75.8%;
-  left: 36.11%;
+  left: 42.11%;
   font-weight: bold;
   color: #000;
   font-size: 18px;
