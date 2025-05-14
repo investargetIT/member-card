@@ -1,9 +1,8 @@
 <script setup>
 import { ref, onMounted, nextTick, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import html2canvas from "html2canvas";
-import HelloWorld from "./components/HelloWorld.vue";
-// 引入本地图片
-import cardBackground from "./assets/card-back.jpg";
+import cardBackgroundAsset from "./assets/card-back.jpg";
 
 const cardData = ref(null);
 const cardImageSrc = ref("");
@@ -11,9 +10,13 @@ const renderedImage = ref("");
 const errorMessage = ref("");
 const currentPath = ref("");
 const isRendering = ref(false);
-const showMemberCard = ref(false);
 
-// 添加下载图片的函数
+const route = useRoute();
+const router = useRouter(); // if needed for navigation, not currently used in this script block
+
+// Pass the imported background image as a prop
+const cardBackground = ref(cardBackgroundAsset);
+
 const downloadImage = (dataUrl, filename = "membership-card.png") => {
   const link = document.createElement("a");
   link.href = dataUrl;
@@ -23,15 +26,25 @@ const downloadImage = (dataUrl, filename = "membership-card.png") => {
   document.body.removeChild(link);
 };
 
-onMounted(async () => {
+const fetchDataAndRender = async () => {
   try {
     isRendering.value = false;
     currentPath.value = location.href;
+    errorMessage.value = "";
+    cardData.value = null;
+    cardImageSrc.value = "";
+    renderedImage.value = "";
 
-    const cardMatch = location.href.match(/\/card\/\?(\d+)/);
-    const memberMatch = location.href.match(/\/member\/\?(\d+)/);
+    const href = location.href;
+    // Previous regex logic restored
+    const cardMatch = href.match(/\/card\/\?(\d+)/);
+    const memberMatch = href.match(/\/member\/\?(\d+)/);
     const number = cardMatch?.[1] || memberMatch?.[1];
     const isMemberPath = !!memberMatch;
+    console.log("isMemberPath:", isMemberPath);
+    console.log("number:", number);
+    console.log("cardMatch:", cardMatch);
+    console.log("memberMatch:", memberMatch);
 
     let commonUrl = "https://api.peidigroup.cn/pm/card/use";
     if (number) {
@@ -83,14 +96,34 @@ onMounted(async () => {
     errorMessage.value = "当前已无会员卡内容";
     isRendering.value = false;
   }
-});
+};
 
-// 监听 renderedImage 的变化
-watch(renderedImage, (newValue) => {
-  if (newValue && currentPath.value.includes("/card/")) {
-    showMemberCard.value = true;
+onMounted(() => {
+  // Fetch data if the current route (determined by vue-router) is Card or Member
+  // The actual ID extraction will be by regex within fetchDataAndRender
+  // console.log("route.name:", route.name);
+  // console.log(route);
+  // console.log(router);
+  const isValidPath = route.name === "Member" || route.path === "/";
+  if (isValidPath) {
+    fetchDataAndRender();
   }
 });
+
+// Watch for changes in the full path (vue-router will update this)
+watch(
+  () => route.fullPath,
+  (newFullPath, oldFullPath) => {
+    if (newFullPath && newFullPath !== oldFullPath) {
+      // Re-fetch if it's a Card or Member route. ID will be parsed from href by regex.
+      const isValidPath = route.name === "Member" || route.path === "/";
+      if (isValidPath) {
+        fetchDataAndRender();
+      }
+    }
+  },
+  { immediate: false }
+);
 </script>
 
 <template>
@@ -98,167 +131,37 @@ watch(renderedImage, (newValue) => {
     <p>{{ errorMessage }}</p>
   </div>
   <div v-else>
-    <!-- 加载状态 -->
     <div v-if="isRendering" class="loading-container">
       <div class="loading-spinner"></div>
       <p>生成图片中...</p>
     </div>
-    <!-- 原有的卡片逻辑 -->
-    <div
-      v-else-if="!renderedImage && !currentPath.includes('/member/')"
-      class="membership-card"
-    >
-      <div class="card-content">
-        <span class="card-no">{{ cardData?.cardNo }}</span>
-        <!-- 使用引入的图片作为背景 -->
-        <img
-          :src="cardBackground"
-          alt="Card Background"
-          class="card-background"
-        />
-        <img :src="cardImageSrc" alt="QR Code" class="qr-code" />
-      </div>
-    </div>
-    <!-- 会员卡显示逻辑 -->
-    <div
-      v-else-if="!renderedImage && currentPath.includes('/member/')"
-      class="membership-card-container"
-    >
-      <div class="member-card-content">
-        <span class="member-card-tip">Peidi 佩蒂</span>
-        <img :src="cardImageSrc" alt="QR Code" class="member-qr-code" />
-        <span class="member-card-no">No.{{ cardData?.cardNo }}</span>
-      </div>
-    </div>
-    <!-- 渲染后的图片显示 -->
-    <div v-else>
+
+    <!-- Rendered image display (if available) -->
+    <div v-if="renderedImage">
       <img
         :src="renderedImage"
         alt="Rendered Card"
         style="width: 350px; height: auto; border: 1px solid #ccc"
       />
     </div>
+
+    <!-- Router view to display CardView or MemberView -->
+    <!-- Show router view content only if not rendering and no final image yet -->
+    <router-view
+      v-else
+      v-slot="{ Component, route: currentRoute }"
+      :cardData="cardData"
+      :cardImageSrc="cardImageSrc"
+      :cardBackground="cardBackground"
+      :style="{ display: isRendering || renderedImage ? 'none' : 'block' }"
+    />
+
+    <!-- Fallback for initial loading before data or if route is not Card/Member -->
   </div>
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-
-.membership-card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 0;
-  width: 350px;
-  margin: 0;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.card-content {
-  position: relative;
-  width: 100%;
-  min-height: 620px;
-  height: auto;
-}
-
-.card-no {
-  position: absolute;
-  top: 13.8%;
-  left: 75.11%;
-  font-weight: bold;
-  color: #fff;
-  font-size: 12px;
-}
-
-.card-background {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.qr-code {
-  width: 90px;
-  position: absolute;
-  top: 339px;
-  left: 130px;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  border-radius: 50%;
-}
-
-.card-footer {
-  padding-top: 16px;
-}
-
-.footer-image {
-  width: 100%;
-  height: auto;
-}
-
-/* 新增会员卡样式 */
-.membership-card-container {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 0;
-  width: 350px;
-  margin: 0;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.member-card-content {
-  position: relative;
-  width: 100%;
-  min-height: 400px;
-  height: auto;
-}
-
-.member-card-tip {
-  position: absolute;
-  top: 5.8%;
-  left: 8.11%;
-  font-weight: bold;
-  color: #000;
-  font-size: 18px;
-  letter-spacing: 1px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.member-card-no {
-  position: absolute;
-  top: 75.8%;
-  left: 42.11%;
-  font-weight: bold;
-  color: #000;
-  font-size: 18px;
-}
-
-.member-qr-code {
-  width: 200px;
-  position: absolute;
-  top: 77px;
-  left: 73px;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  border-radius: 50%;
-}
-
-/* 加载状态样式 */
+/* Global styles like loading spinner remain here */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -298,4 +201,6 @@ watch(renderedImage, (newValue) => {
     transform: rotate(360deg);
   }
 }
+/* Styles for .logo, .logo.vue, .card-footer, .footer-image can be removed if not used */
+/* Or kept if they are general layout styles for App.vue */
 </style>
