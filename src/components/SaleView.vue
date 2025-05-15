@@ -172,6 +172,8 @@ onUnmounted(() => {
       "
     />
   </div>
+  <!-- 横屏提示遮罩 -->
+  <div class="force-landscape-mask">请将手机横屏以获得最佳体验</div>
 </template>
 
 <style scoped>
@@ -180,10 +182,36 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   justify-content: center;
-  position: relative;
   align-items: center;
+  position: relative;
   overflow: hidden;
   perspective: 1000px;
+}
+
+@media screen and (orientation: portrait) {
+  .force-landscape-mask {
+    display: flex;
+  }
+}
+@media screen and (orientation: landscape) {
+  .force-landscape-mask {
+    display: none;
+  }
+}
+.force-landscape-mask {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: #111;
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+  text-align: center;
 }
 
 .sale-background {
@@ -194,6 +222,21 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   z-index: 1;
+  filter: brightness(0.85) contrast(1.1);
+  transition: filter 0.3s ease;
+}
+
+@media screen and (max-width: 768px) {
+  .sale-background {
+    object-position: center;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .sale-background {
+    object-position: center;
+    filter: brightness(0.8) contrast(1.2);
+  }
 }
 
 /* New container for currency and count, centered */
@@ -211,13 +254,25 @@ onUnmounted(() => {
 .sale-currency {
   /* Removed position: absolute, left, top, transform from here */
   color: #ccc;
-  font-size: 4.5em; /* Adjusted to be slightly smaller than digits, tune as needed */
+  font-size: 4.5em; /* 默认桌面端大小 */
   font-weight: bold;
-  margin-right: 0.15em; /* Space between currency and first digit */
+  margin-right: 0.15em;
   transform-style: preserve-3d;
   animation: flipIn 0.8s ease-out forwards;
-  opacity: 0; /* Start hidden for animation */
-  /* animation-delay: 0.1s; /* Optional: slight delay if needed */
+  opacity: 0;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .sale-currency {
+    font-size: 3em;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .sale-currency {
+    font-size: 2em;
+  }
 }
 
 .sale-count-wrapper {
@@ -227,13 +282,26 @@ onUnmounted(() => {
 
 .digit-flipper {
   color: #ccc;
-  font-size: 3em;
+  font-size: 3em; /* 默认桌面端大小 */
   font-weight: bold;
-  margin: 0 0.05em; /* Spacing between digits */
+  margin: 0 0.05em;
   transform-style: preserve-3d;
   animation: flipIn 0.8s ease-out forwards;
   opacity: 0;
   transform: rotateX(-90deg);
+}
+
+@media screen and (max-width: 768px) {
+  .digit-flipper {
+    font-size: 2.5em;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .digit-flipper {
+    font-size: 1.8em;
+    margin: 0 0.03em;
+  }
 }
 
 .digit-flipper .digit {
@@ -262,9 +330,22 @@ onUnmounted(() => {
   bottom: 3%;
   left: 50%;
   transform: translateX(-50%);
-  color: #56565fa6; /* As per user change */
+  color: #56565fa6;
   font-size: 1.5em;
   z-index: 2;
+}
+
+@media screen and (max-width: 768px) {
+  .sale-time {
+    font-size: 1.2em;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .sale-time {
+    font-size: 1em;
+    bottom: 2%;
+  }
 }
 
 .fullscreen-btn {
@@ -281,5 +362,25 @@ onUnmounted(() => {
   border-radius: 0.5em;
   cursor: pointer;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media screen and (max-width: 768px) {
+  .fullscreen-btn {
+    padding: 0.8em 1.6em;
+    font-size: 1.2em;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .fullscreen-btn {
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    width: 80%;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 </style>
