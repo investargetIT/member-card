@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import saleBackgroundAsset from "../assets/sale-bg.png";
+import { Fireworks } from "@fireworks-js/vue";
 
 // Real-time clock
 const currentTime = ref("");
@@ -19,80 +20,109 @@ const updateCurrentTime = () => {
 };
 
 // Dynamic sale count - simplified for layout focus
-const currentSaleNumberString = ref("12345.99"); // Example starting number string, can change length
-let saleCountIntervalId = null;
+// const currentSaleNumberString = ref("12345.99"); // Example starting number string, can change length
+// let saleCountIntervalId = null;
+
+const curSaleCount = ref(0);
 
 const displayedDigits = ref([]);
 
+const formatSaleCount = (num) => {
+  // 只返回纯数字字符串，不加逗号
+  return String(Math.floor(num));
+};
+
+const fetchSaleCount = async () => {
+  try {
+    const response = await fetch("https://api.peidigroup.cn/oms/bi/salesAll");
+    const res = await response.json();
+    if (res?.code === 200) {
+      const total =
+        res.data?.reduce((prev, cur) => {
+          prev += cur.salesAmount;
+          return prev;
+        }, 0) || 0;
+      curSaleCount.value = total;
+      console.log("===curSaleCount数据==");
+      console.log(curSaleCount.value);
+    }
+  } catch (error) {
+    console.error("Error fetching sale count:", error);
+  }
+};
+
+const fireworksRef = ref(null);
+
 watch(
-  currentSaleNumberString,
-  (newNumberString, oldNumberString) => {
+  curSaleCount,
+  (newVal, oldVal) => {
+    const str = formatSaleCount(newVal);
+    const oldStr = oldVal !== undefined ? formatSaleCount(oldVal) : null;
     const newDigitsArray = [];
-    if (newNumberString) {
-      // Ensure newNumberString is not null/undefined
-      for (let i = 0; i < newNumberString.length; i++) {
-        const newValue = newNumberString[i];
-        const oldValue = oldNumberString ? oldNumberString[i] : null;
-        const keySuffix = Date.now() + Math.random();
-        newDigitsArray.push({
-          value: newValue,
-          uniqueKey: `${newValue}-${i}-${
-            newValue !== oldValue || !oldNumberString
-              ? keySuffix
-              : displayedDigits.value[i]?.uniqueKey.split("-")[2]
-          }`,
-        });
-      }
+    for (let i = 0; i < str.length; i++) {
+      const newValue = str[i];
+      const oldValue = oldStr ? oldStr[i] : null;
+      const keySuffix = Date.now() + Math.random();
+      newDigitsArray.push({
+        value: newValue,
+        uniqueKey: `${newValue}-${i}-${
+          newValue !== oldValue || !oldStr
+            ? keySuffix
+            : displayedDigits.value[i]?.uniqueKey.split("-")[2]
+        }`,
+      });
     }
     displayedDigits.value = newDigitsArray;
+    // 触发烟花动画（首次不触发）
+    if (fireworksRef.value && oldVal !== undefined) {
+      fireworksRef.value.launch(3); // 可调整数量
+    }
   },
   { immediate: true }
 );
 
+const containerRef = ref(null);
+const showFullscreenBtn = ref(false);
+
+const enterFullscreen = () => {
+  if (containerRef.value && containerRef.value.requestFullscreen) {
+    containerRef.value.requestFullscreen();
+    showFullscreenBtn.value = false;
+  }
+};
+
 onMounted(() => {
+  fetchSaleCount();
   updateCurrentTime();
   clockIntervalId = setInterval(updateCurrentTime, 1000);
-
-  // Simulate saleCountString changing for a few digits and length
-  saleCountIntervalId = setInterval(() => {
-    let numStr = currentSaleNumberString.value || ""; // Ensure numStr is a string
-    if (numStr.length > 0 && Math.random() < 0.7) {
-      // Higher chance to change existing digit
-      const randomIndex = Math.floor(Math.random() * numStr.length);
-      const newDigit = Math.floor(Math.random() * 10).toString();
-      currentSaleNumberString.value =
-        numStr.substring(0, randomIndex) +
-        newDigit +
-        numStr.substring(randomIndex + 1);
+  // 可选：定时刷新接口
+  setInterval(fetchSaleCount, 10000); // 每10秒刷新一次
+  // 不再自动全屏，按钮控制
+  showFullscreenBtn.value = true;
+  // 监听全屏变更，退出全屏时重新显示按钮
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) {
+      showFullscreenBtn.value = true;
     }
-
-    if (Math.random() < 0.15) {
-      // Chance to increase length
-      if (numStr.length < 10) {
-        // Max length 10 for demo
-        currentSaleNumberString.value =
-          numStr + Math.floor(Math.random() * 10).toString();
-      }
-    } else if (Math.random() < 0.1) {
-      // Chance to decrease length
-      if (numStr.length > 3) {
-        // Min length 3 for demo
-        currentSaleNumberString.value = numStr.slice(0, -1);
-      }
-    }
-  }, 2000); // Change more frequently for testing
+  });
 });
 
 onUnmounted(() => {
   if (clockIntervalId) clearInterval(clockIntervalId);
-  if (saleCountIntervalId) clearInterval(saleCountIntervalId);
 });
 
 // Props expected from App.vue
 </script>
 
 <template>
-  <div class="sale-container">
+  <div class="sale-container" ref="containerRef">
+    <button
+      v-if="showFullscreenBtn"
+      class="fullscreen-btn"
+      @click="enterFullscreen"
+    >
+      点击此处，沉浸式体验
+    </button>
     <img
       :src="saleBackgroundAsset"
       alt="Sale Background"
@@ -112,6 +142,20 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="sale-time">{{ currentTime }}</div>
+    <!-- 烟花特效全屏覆盖 -->
+    <Fireworks
+      ref="fireworksRef"
+      :autoresize="true"
+      style="
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: 999;
+      "
+    />
   </div>
 </template>
 
@@ -140,7 +184,7 @@ onUnmounted(() => {
 /* New container for currency and count, centered */
 .amount-display-container {
   display: flex;
-  align-items: baseline; /* Align currency and numbers along their baseline */
+  align-items: center; /* Align currency and numbers along their baseline */
   justify-content: center; /* Center the flex items if container is wider than content */
   position: absolute;
   top: 45%;
@@ -206,5 +250,21 @@ onUnmounted(() => {
   color: #56565fa6; /* As per user change */
   font-size: 1.5em;
   z-index: 2;
+}
+
+.fullscreen-btn {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2000;
+  padding: 1em 2em;
+  font-size: 1.5em;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: none;
+  border-radius: 0.5em;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 </style>
