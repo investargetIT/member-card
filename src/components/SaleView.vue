@@ -85,13 +85,28 @@ const containerRef = ref(null);
 const showFullscreenBtn = ref(false);
 
 const enterFullscreen = () => {
-  if (containerRef.value && containerRef.value.requestFullscreen) {
-    containerRef.value.requestFullscreen();
+  const el = containerRef.value;
+  if (!el) return;
+  if (el.requestFullscreen) {
+    el.requestFullscreen();
+    showFullscreenBtn.value = false;
+  } else if (el.webkitRequestFullscreen) {
+    el.webkitRequestFullscreen();
+    showFullscreenBtn.value = false;
+  } else if (el.mozRequestFullScreen) {
+    el.mozRequestFullScreen();
+    showFullscreenBtn.value = false;
+  } else if (el.msRequestFullscreen) {
+    el.msRequestFullscreen();
+    showFullscreenBtn.value = false;
+  } else {
+    alert("当前浏览器不支持全屏API");
     showFullscreenBtn.value = false;
   }
 };
 
 onMounted(() => {
+  document.title = "618大促";
   fetchSaleCount();
   updateCurrentTime();
   clockIntervalId = setInterval(updateCurrentTime, 1000);
