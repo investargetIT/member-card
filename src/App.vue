@@ -30,7 +30,6 @@ const fetchDataAndRender = async () => {
   try {
     isRendering.value = false;
     currentPath.value = location.href;
-
     const href = location.href;
     // Previous regex logic restored
     const cardMatch = href.match(/\/card\/\?(\d+)/);
@@ -100,12 +99,6 @@ onMounted(() => {
   }
 });
 
-watch(renderedImage, (newVal, oldVal) => {
-  if (newVal) {
-    console.log("renderedImage:", newVal);
-  }
-});
-
 watch(
   () => route.fullPath,
   (newFullPath, oldFullPath) => {
@@ -126,19 +119,22 @@ watch(
     <p>{{ errorMessage }}</p>
   </div>
   <div v-else>
-    <div v-if="isRendering" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>生成图片中...</p>
-    </div>
     <router-view
-      v-else-if="!renderedImage"
+      v-if="!renderedImage"
       v-slot="{ Component, route: currentRoute }"
       :cardData="cardData"
       :cardImageSrc="cardImageSrc"
       :cardBackground="cardBackground"
-      :style="{ display: isRendering || renderedImage ? 'none' : 'block' }"
-    />
-    <div v-else="renderedImage">
+    >
+      <component
+        :is="Component"
+        :cardData="cardData"
+        :cardImageSrc="cardImageSrc"
+        :cardBackground="cardBackground"
+      />
+    </router-view>
+
+    <div v-if="renderedImage">
       <img
         :src="renderedImage"
         alt="Rendered Card"

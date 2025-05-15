@@ -27,7 +27,6 @@ defineProps({
   margin: 0;
   text-align: center;
   box-sizing: border-box;
-  /* Ensure it's displayed for html2canvas even if App.vue controls visibility of wrapper */
   display: block;
 }
 

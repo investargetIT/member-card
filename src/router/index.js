@@ -8,7 +8,7 @@ import App from "../App.vue";
 
 const routes = [
   {
-    path: "/card",
+    path: "/",
     name: "Card",
     component: CardView, // Use CardView component
     props: true,
