@@ -9,14 +9,16 @@ const cardImageSrc = ref("");
 const renderedImage = ref("");
 const errorMessage = ref("");
 const currentPath = ref("");
-const isRendering = ref(false);
-
+const isLoading = ref(true); // 添加加载状态
+const imageLoaded = ref(false); // 添加图片加载状态
+const isRendering = ref(false); // 添加渲染状态
 const route = useRoute();
-const router = useRouter(); // if needed for navigation, not currently used in this script block
+const router = useRouter();
 
 // Pass the imported background image as a prop
 const cardBackground = ref(cardBackgroundAsset);
 
+// 添加下载图片的函数
 const downloadImage = (dataUrl, filename = "membership-card.png") => {
   const link = document.createElement("a");
   link.href = dataUrl;
@@ -28,12 +30,10 @@ const downloadImage = (dataUrl, filename = "membership-card.png") => {
 
 const fetchDataAndRender = async () => {
   try {
+    isLoading.value = true;
+    imageLoaded.value = false;
     isRendering.value = false;
     currentPath.value = location.href;
-    errorMessage.value = "";
-    cardData.value = null;
-    cardImageSrc.value = "";
-    renderedImage.value = "";
 
     const href = location.href;
     // Previous regex logic restored
@@ -57,15 +57,19 @@ const fetchDataAndRender = async () => {
     const res = await response.json();
     if (res.data?.card) {
       cardData.value = res.data;
-      cardImageSrc.value = `data:image/png;base64,${res.data.card}`;
     } else {
       errorMessage.value = "当前已无会员卡内容";
+      isLoading.value = false;
       return;
     }
 
+    // 假设 cardData.value.card 是 Base64 编码的字符串
+    cardImageSrc.value = `data:image/png;base64,${cardData.value.card}`;
+
+    // 等待 DOM 渲染完成后将卡片转换为图像
     await nextTick();
     const cardElement = document.querySelector(
-      isMemberPath ? ".member-card-content" : ".card-content"
+      isMemberPath ? ".member-card-content" : ".membership-card"
     );
     if (cardElement) {
       isRendering.value = true;
@@ -84,23 +88,26 @@ const fetchDataAndRender = async () => {
           renderedImage.value = canvas.toDataURL("image/png", 1.0);
           downloadImage(renderedImage.value);
           isRendering.value = false;
+          isLoading.value = false;
         })
         .catch((error) => {
           console.error("Error generating image:", error);
           errorMessage.value = "图片生成失败";
           isRendering.value = false;
+          isLoading.value = false;
         });
+    } else {
+      isLoading.value = false;
     }
   } catch (error) {
     console.error("There was a problem with the fetch operation:", error);
     errorMessage.value = "当前已无会员卡内容";
+    isLoading.value = false;
     isRendering.value = false;
   }
 };
 
 onMounted(() => {
-  // Fetch data if the current route (determined by vue-router) is Card or Member
-  // The actual ID extraction will be by regex within fetchDataAndRender
   // console.log("route.name:", route.name);
   // console.log(route);
   // console.log(router);
@@ -110,7 +117,12 @@ onMounted(() => {
   }
 });
 
-// Watch for changes in the full path (vue-router will update this)
+watch(renderedImage, (newVal, oldVal) => {
+  if (newVal) {
+    console.log("renderedImage:", newVal);
+  }
+});
+
 watch(
   () => route.fullPath,
   (newFullPath, oldFullPath) => {
@@ -135,8 +147,6 @@ watch(
       <div class="loading-spinner"></div>
       <p>生成图片中...</p>
     </div>
-
-    <!-- Rendered image display (if available) -->
     <div v-if="renderedImage">
       <img
         :src="renderedImage"
@@ -144,9 +154,6 @@ watch(
         style="width: 350px; height: auto; border: 1px solid #ccc"
       />
     </div>
-
-    <!-- Router view to display CardView or MemberView -->
-    <!-- Show router view content only if not rendering and no final image yet -->
     <router-view
       v-else
       v-slot="{ Component, route: currentRoute }"
@@ -155,13 +162,10 @@ watch(
       :cardBackground="cardBackground"
       :style="{ display: isRendering || renderedImage ? 'none' : 'block' }"
     />
-
-    <!-- Fallback for initial loading before data or if route is not Card/Member -->
   </div>
 </template>
 
 <style scoped>
-/* Global styles like loading spinner remain here */
 .loading-container {
   display: flex;
   flex-direction: column;
