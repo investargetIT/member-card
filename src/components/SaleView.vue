@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import saleBackgroundAsset from "../assets/sale-bg.png";
+import mobileBackgroundAsset from "../assets/mobile-bg.png";
 import { Fireworks } from "@fireworks-js/vue";
 
 // Real-time clock
@@ -105,44 +106,59 @@ const enterFullscreen = () => {
   }
 };
 
+const isMobile = ref(false);
+
+function checkIsMobile() {
+  isMobile.value =
+    /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    ) || window.innerWidth <= 768;
+}
+
+watch(isMobile, (newVal) => {
+  console.log("===isMobile==");
+  console.log(newVal);
+});
+
 onMounted(() => {
   document.title = "618大促";
   fetchSaleCount();
   updateCurrentTime();
   clockIntervalId = setInterval(updateCurrentTime, 1000);
-  // 可选：定时刷新接口
-  setInterval(fetchSaleCount, 10000); // 每10秒刷新一次
-  // 不再自动全屏，按钮控制
+  setInterval(fetchSaleCount, 10000);
   showFullscreenBtn.value = true;
-  // 监听全屏变更，退出全屏时重新显示按钮
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) {
       showFullscreenBtn.value = true;
     }
   });
+  checkIsMobile();
+  window.addEventListener("resize", checkIsMobile);
 });
 
 onUnmounted(() => {
   if (clockIntervalId) clearInterval(clockIntervalId);
+  window.removeEventListener("resize", checkIsMobile);
 });
 
 // Props expected from App.vue
+
+// 在 setup 里添加一个 computed 变量，判断当前图片资源
+const backgroundAsset = computed(() =>
+  isMobile.value ? mobileBackgroundAsset : saleBackgroundAsset
+);
 </script>
 
 <template>
   <div class="sale-container" ref="containerRef">
     <button
-      v-if="showFullscreenBtn"
+      v-if="showFullscreenBtn && !isMobile"
       class="fullscreen-btn"
       @click="enterFullscreen"
     >
       点击此处，沉浸式体验
     </button>
-    <img
-      :src="saleBackgroundAsset"
-      alt="Sale Background"
-      class="sale-background"
-    />
+    <img :src="backgroundAsset" alt="Sale Background" class="sale-background" />
     <!-- New wrapper for currency and count -->
     <div class="amount-display-container">
       <span class="sale-currency">¥</span>
@@ -330,7 +346,8 @@ onUnmounted(() => {
   bottom: 3%;
   left: 50%;
   transform: translateX(-50%);
-  color: #56565fa6;
+  /* color: #56565fa6; */
+  color: #f5f5f5;
   font-size: 1.5em;
   z-index: 2;
 }
